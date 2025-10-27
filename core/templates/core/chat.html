@@ -1,0 +1,23 @@
+{% extends "core/layout.html" %}
+{% block content %}
+
+{{ massage }}
+
+    {% for message in history %}
+    <div class="chat-content">
+        {{ message.role }}
+        {{ message.content }}
+        <hr>
+    </div>
+ 
+    {% endfor %}
+
+
+    <div class="chat-input">
+        <form method="POST" >
+            {% csrf_token %} 
+            <input type="text" name="question" placeholder="向 AI 学习助手提问..." required autocomplete="off">
+            <button type="submit">发送</button>
+        </form>
+    </div>
+{% endblock %}
