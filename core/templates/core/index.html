@@ -1,0 +1,17 @@
+{% extends "core/layout.html" %}
+{% block content %}
+
+<div class="conversation_list">
+    {% for conversation in conversations %}
+    <div class="conversation_item">
+        <a href="{% url 'chat' conversation.id %}">{{ conversation.title }}</a>
+        <hr>   
+    </div>
+    {% endfor %}
+</div>
+<div class="new_chat">
+    <a href="{% url 'new_chat'%}">New Chat</a>
+</div>
+
+
+{% endblock %}
