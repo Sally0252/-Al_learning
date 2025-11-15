@@ -4,41 +4,60 @@ from core.models import Conversation
 from core import services
 from django.utils import timezone
 from django.urls import reverse
-
+from core.forms import ChoiceForm
 
 
 
 def new_chat(request: HttpRequest):
-    history = [
-    {"role": "system", "content": "你是我的python学习助手，你要在明确我的学习目标，和学习背景的情况下，辅助我完成我的学习目标"},
-    ] 
+    if request.method == 'POST':
+        conversation_id = services.create_conversation(request.POST.get('answer'))
 
-    conversation = Conversation.objects.create(
-        title = 'python learning',
-        history = history,
-        created_at = timezone.now(),
-        updated_at = timezone.now(),
-        )
-    return HttpResponseRedirect(reverse('chat',kwargs={'conversation_id': conversation.id}))
+        return HttpResponseRedirect(reverse('choice_chat',kwargs={'conversation_id': conversation_id}))
+  
+    return render(request, 'core/new_chat.html')
+   
+# get 显示choice，和表单， post，处理choice的答案，然后redirect到chat
+def choice_chat(request: HttpRequest, conversation_id: int):
+
+    choice_questions = services.get_choice_data(conversation_id)
+
+    if request.method == 'POST':
+        form = ChoiceForm(request.POST, choice_data=choice_questions)
+
+        if form.is_valid():
+            choice_answers = ''.join(form.cleaned_data.values())
+            services.handle_choice_answers(choice_answers, conversation_id)
+            
+            return HttpResponseRedirect(reverse('chat',kwargs={'conversation_id': conversation_id}))
+
+    form = ChoiceForm(choice_data=choice_questions)
+
+    context = {'form': form, 'conversation_id': conversation_id}
+    return render(request, 'core/choice_chat.html', context)
+    
+
 
 # get得到聊天历史， post提交聊天，并更新聊天历史。
-def chat(reqeust: HttpRequest, conversation_id: int):
+def chat(request: HttpRequest, conversation_id: int):
     conversation = Conversation.objects.get(id = conversation_id)
-    history = conversation.history
+    history = conversation.history[3:]
 
-    if reqeust.method == 'POST':
-        question = reqeust.POST.get('question')
-        # ask
-        history.append({"role": "user", "content": question})
-        reply = services.get_deepseek_response(history)
-        history.append({"role": "assistant", "content": reply})
-        conversation.history = history
-        conversation.save()
-    
-    return render(reqeust, 'core/chat.html', {'history': history})
+    if request.method == 'POST':
+        if 'next' in request.POST:
+            services.handle_next(conversation_id)
+        elif 'answer' in request.POST:
+            services.handle_answer(conversation_id)
+        elif 'question' in request.POST:
+            services.handle_question(conversation_id)
+
+		
+
+    context = {"history":history, "conversation_id": conversation_id}
+    return render(request, 'core/chat.html', context)
 
 
 def index(request):
     conversations = Conversation.objects.all()
     return render(request, 'core/index.html', {'conversations': conversations})
+
 

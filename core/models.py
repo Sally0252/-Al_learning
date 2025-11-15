@@ -4,6 +4,7 @@ from django.db import models
 class Conversation(models.Model):
     title = models.CharField(max_length=200)
     history = models.JSONField(default=list)
+    
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
 
