@@ -27,7 +27,7 @@ def choice_chat(request: HttpRequest, conversation_id: int):
         if form.is_valid():
             choice_answers = ''.join(form.cleaned_data.values())
             services.handle_choice_answers(choice_answers, conversation_id)
-            
+
             return HttpResponseRedirect(reverse('chat',kwargs={'conversation_id': conversation_id}))
 
     form = ChoiceForm(choice_data=choice_questions)
@@ -38,21 +38,32 @@ def choice_chat(request: HttpRequest, conversation_id: int):
 
 
 # get得到聊天历史， post提交聊天，并更新聊天历史。
+# 每次都有2个id
+# 
 def chat(request: HttpRequest, conversation_id: int):
-    conversation = Conversation.objects.get(id = conversation_id)
-    history = conversation.history[3:]
+
+    module_id = request.GET.get('module_id', "M01")
 
     if request.method == 'POST':
-        if 'next' in request.POST:
-            services.handle_next(conversation_id)
-        elif 'answer' in request.POST:
+ 
+        
+        action = request.POST.get('action')
+
+        if action == 'next':
+            module_id =  services.handle_next(conversation_id)
+            
+        elif action == 'answer':
             services.handle_answer(conversation_id)
-        elif 'question' in request.POST:
-            services.handle_question(conversation_id)
+
+            
+        elif action == 'Q&A':
+            question = request.POST.get('question')
+            services.handle_question(question, conversation_id)
 
 		
-
-    context = {"history":history, "conversation_id": conversation_id}
+    learning_plan = services.get_learning_plan(conversation_id)
+    learning_content = services.get_learning_module(conversation_id, module_id)
+    context = {'learning_plan': learning_plan, 'learning_content': learning_content, "conversation_id": conversation_id}
     return render(request, 'core/chat.html', context)
 
 
@@ -61,3 +72,7 @@ def index(request):
     return render(request, 'core/index.html', {'conversations': conversations})
 
 
+def remove(request, conversation_id: int):
+    Conversation.objects.get(id = conversation_id).delete()
+    return HttpResponseRedirect(reverse('index'))
+  

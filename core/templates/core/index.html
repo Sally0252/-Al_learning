@@ -5,6 +5,8 @@
     {% for conversation in conversations %}
     <div class="conversation_item">
         <a href="{% url 'chat' conversation.id %}">{{ conversation.title }}</a>
+        <a href="{% url 'remove' conversation.id %}"
+            onclick="return confirm('Do you really want to delete this conversation?')">Remove</a>
         <hr>   
     </div>
     {% endfor %}

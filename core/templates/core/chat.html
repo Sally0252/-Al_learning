@@ -1,23 +1,153 @@
 {% extends "core/layout.html" %}
+
 {% block content %}
 
-{{ massage }}
+<style>
+    /* 新增样式：用于实现两栏布局 */
+    #learning-container {
+        display: flex;
+        min-height: 80vh; /* 确保内容区足够长 */
+    }
+    #sidebar {
+        width: 300px;
+        background-color: #f8f8f8;
+        padding: 20px;
+        border-right: 1px solid #ddd;
+        /* 保持目录位置固定，如果需要 */
+        /* position: sticky; top: 0; height: 100vh; */
+    }
+    #main-area {
+        flex-grow: 1;
+        padding: 30px;
+        display: flex;
+        flex-direction: column; /* 垂直排列内容和输入区 */
+    }
+    .module-item {
+        margin-bottom: 5px;
+        padding: 8px 10px;
+        border-radius: 4px;
+        font-size: 0.95em;
+    }
+    .module-item a {
+        text-decoration: none;
+        color: #333;
+        display: block;
+    }
+    .module-item.current {
+        background-color: #d1e7ff; /* 当前模块高亮 */
+        font-weight: bold;
+        border-left: 4px solid #007bff;
+    }
+    .module-item.completed a {
+         color: #6c757d; /* 已完成变灰 */
+    }
+    /* 学习内容区样式 */
+    #learning-content-display {
+        flex-grow: 1; /* 占据大部分空间 */
+        margin-bottom: 20px;
+    }
+    pre {
+        background-color: #eee;
+        padding: 15px;
+        white-space: pre-wrap; /* 允许内容自动换行 */
+        border-radius: 5px;
+    }
+    /* 聊天输入区样式 */
+    .chat-input {
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+</style>
 
-    {% for message in history %}
-    <div class="chat-content">
-        {{ message.role }}
-        {{ message.content }}
-        <hr>
+<div id="learning-container">
+
+    <div id="sidebar">
+        <h2>📚 学习计划</h2>
+        <nav>
+            {% for item in learning_plan %}
+                {% with current_id=learning_content.module_info.id %}
+                
+                <div class="module-item 
+                    {% if item.id == current_id %}current{% endif %}
+                    {% if item.status == 'completed' %}completed{% endif %}
+                ">
+                    <a href="{% url 'chat' conversation_id=conversation_id %}?module_id={{ item.id }}">
+                        [{{ item.id }}] {{ item.title }}
+                        {% if item.status == 'completed' %} (✔) {% endif %}
+                    </a>
+                </div>
+                {% endwith %}
+            {% empty %}
+                <p>学习计划尚未加载。</p>
+            {% endfor %}
+        </nav>
     </div>
- 
-    {% endfor %}
 
+    <div id="main-area">
+        
+        <div id="learning-content-display">
+            {% with info=learning_content.module_info %}
+                {% if info.title %}
+                    <h1>{{ info.title }}</h1>
+                    <p>模块ID: <strong>{{ info.id }}</strong></p>
+                    <hr>
+                    
+                    <h2>📖 课程内容</h2>
+                    <div class="content-body">
+                        <pre>{{ learning_content.content }}</pre>
+                    </div>
+                    
+                    <h2>📝 课后习题</h2>
+                    <div class="exercise-body">
+                        <pre>{{ learning_content.exercise }}</pre>
+                    </div>
+                {% else %}
+                    <h1>欢迎</h1>
+                    <p>请点击左侧目录开始学习。</p>
+                {% endif %}
+            {% endwith %}
+        </div>
 
-    <div class="chat-input">
-        <form method="POST" >
-            {% csrf_token %} 
-            <input type="text" name="question" placeholder="向 AI 学习助手提问..." required autocomplete="off">
-            <button type="submit">发送</button>
-        </form>
+        <div class="chat-input">
+            <form method="POST" action="{% url 'chat' conversation_id=conversation_id %}?module_id={{ learning_content.module_info.id }}">
+                {% csrf_token %} 
+                
+                <input type="hidden" name="current_module_id" value="{{ learning_content.module_info.id|default:'' }}">
+                
+                <button name="action" value="next" type="submit">下一课 / 继续学习</button>
+                
+                <button name="action" value="answer" type="submit">查看习题答案</button>
+                
+                <button type="button" id="btnC">答疑</button>
+
+                <div id="customInputContainer" style="display: none; margin-top: 15px;">
+                    <label for="questionInput">输入问题：</label>
+                    <input type="text" name="a-question" id="questionInput" placeholder="输入你想问的问题">
+                    <button name="action" value="Q&A" type="submit">提交问题</button>
+                </div>
+            </form>
+        </div>
     </div>
+</div>
+
+
+<script>
+    // JavaScript for toggling the Q&A input field
+    document.addEventListener('DOMContentLoaded', function() {
+        const btnC = document.getElementById('btnC');
+        const customContainer = document.getElementById('customInputContainer');
+
+        if (btnC && customContainer) {
+            btnC.addEventListener('click', function() {
+                // 切换输入框的显示状态
+                if (customContainer.style.display === 'none' || customContainer.style.display === '') {
+                    customContainer.style.display = 'block';
+                } else {
+                    customContainer.style.display = 'none';
+                }
+            });
+        }
+    });
+</script>
+
 {% endblock %}
