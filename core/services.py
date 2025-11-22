@@ -11,38 +11,116 @@ DEEPSEEK_API_KEY = "sk-179e4c17fe8c40418956ed4ab9ad7642"
 DEEPSEEK_API_URL = "https://api.deepseek.com"
 client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_API_URL)
 
-def handle_next(conversation_id: int):
+def handle_next(conversation_id: int,current_module_id:str = None):
     conversation = Conversation.objects.get(id = conversation_id)
 
+    #只要点击下一课就标记当前模块为学习完成
+    if current_module_id and current_module_id not in conversation.completed_modules:
+        conversation.completed_modules.append(current_module_id)
+    
+    #生成下一模块的学习内容
     content = "学习"
     conversation.history.append({"role": "user", "content": content})
     reply = get_deepseek_response(conversation.history)
     conversation.history.append({"role": "assistant", "content": reply})
-    module_id = get_module_id(reply)
+    next_module_id = get_module_id(reply)
     history_index = len(conversation.history) - 1
-    conversation.module_index_map[module_id] = history_index
+    
+    #更新模块索引映射
+    conversation.module_index_map[next_module_id] = {'content_index': history_index}
+    
+    #更新进度
+    learning_plan = get_learning_plan(conversation_id)
+    total_modules = len(learning_plan)
+    completed_count = len(conversation.completed_modules)
+    
+    
+    if total_modules > 0 :
+        conversation.current_progress = (completed_count / total_modules) * 100
+        print(f"进度更新: {completed_count}/{total_modules} = {conversation.current_progress}%")
+    else :
+        conversation.current_progress = 0;
 
     conversation.save()
-    return module_id
+    return next_module_id  
      
-     
-def handle_answer(conversation_id: int):
-    conversation = Conversation.objects.get(id = conversation_id)
-
-    content = '答案'
-    conversation.history.append({"role": "user", "content": content})
+def handle_answer(conversation_id: int,current_module_id:str):
+    
+    conversation = Conversation.objects.get(id=conversation_id)
+    
+    # 确保当前生成答案是关联到当前模块的
+    content = '请给出模块{current_module_id}课后习题的参考答案和详细解析，不要使用任何XML标签，直接返回纯文本答案。'
+    conversation.history.append({
+        "role": "user", 
+        "content": content,
+    })
+    print(f"开始为模块 {current_module_id} 生成答案")
+    print(f"请求内容: {content}")
     reply = get_deepseek_response(conversation.history)
-    conversation.history.append({"role": "assistant", "content": reply})
+    conversation.history.append({
+        "role": "assistant",
+        "content": reply,
+        })
+    
+    #记录答案位置
+    answer_index = len(conversation.history) - 1
+    
+    # 更新模块索引映射，确保使用字典格式
+    if current_module_id in conversation.module_index_map:
+        conversation.module_index_map[current_module_id]['answer_index'] = answer_index
+    else:
+        # 如果模块索引映射中还没有这个模块，创建一个基础记录
+        conversation.module_index_map[current_module_id] = {
+            'answer_index': answer_index
+        }
+    
+    print(f"已为模块 {current_module_id} 生成答案，位置: {answer_index}")
     conversation.save()
-
-def handle_question(question, conversation_id: int):
+    
+def handle_question(question, conversation_id: int,current_module_id: str):
     conversation = Conversation.objects.get(id = conversation_id)
-
-    content = f'答疑：{question}'
-    conversation.history.append({"role": "user", "content": content})
+    
+    # 获取或创建当前模块的答疑会话
+    current_session = None
+    session_index = -1
+    
+    for i, session in enumerate(conversation.qa_sessions):
+        if session.get('module_id') == current_module_id:
+            current_session = session
+            session_index = i
+            break
+    
+    # 如果没有找到当前模块的答疑会话，创建一个新的
+    if not current_session:
+        current_session = {
+            'module_id': current_module_id,
+            'qa_pairs': [],  # 存答疑对话
+            'created_at': timezone.now().isoformat()
+        }
+        conversation.qa_sessions.append(current_session)
+        session_index = len(conversation.qa_sessions) - 1
+        
+    # 将用户问题添加到历史记录中
+    question_record = {"role": "user", "content": f"答疑，请直接回答以下问题，不要使用XML格式，不要生成学习内容：{question}"}
+    conversation.history.append(question_record)
+    
+    
     reply = get_deepseek_response(conversation.history)
-    conversation.history.append({"role": "assistant", "content": reply})
+    answer_record = {"role": "assistant", "content": reply}
+    conversation.history.append(answer_record)
+    
+    # 保存答疑会话
+    qa_pair = {
+        'question': question,
+        'answer': reply,
+        'timestamp': timezone.now().isoformat()
+    }
+    
+    current_session['qa_pairs'].append(qa_pair)
+    conversation.qa_sessions[session_index] = current_session
+    
     conversation.save()
+    print(f"答疑记录已保存到模块 {current_module_id} 的会话中")
 
 
 
@@ -55,12 +133,12 @@ def handle_choice_answers(choice_answers, conversation_id: int):
     conversation.history.append({"role": "assistant", "content": reply})
 
     conversation.save()
-    handle_next(conversation_id)
+    handle_next(conversation_id,None)
 
 
 
 
-def create_conversation(answer: str)-> int:
+def create_conversation(answer: str,user)-> int:
         
         prompt = get_prompt_text()
         content = f'你是我的学习助手，你需要辅助我完成{answer}的学习' + prompt
@@ -76,6 +154,7 @@ def create_conversation(answer: str)-> int:
 
         history.append({"role": "assistant", "content": choice_content})
         conversation = Conversation.objects.create(
+            user = user,#关联当前用户
             title = answer,
             history = history,
             created_at = timezone.now(),
@@ -92,10 +171,6 @@ def get_deepseek_response(messages):
     )
 
     return response.choices[0].message.content
-
-
-
-
 
 def get_choice_data(conversation_id: int):
     choice_content = Conversation.objects.get(pk = conversation_id).history[-1]['content']
@@ -199,11 +274,17 @@ def get_learning_plan(conversation_id: int) -> List[Dict[str, str]]:
 
 
 
-def get_learning_module(conversation_id: int, module_id: str) -> Dict[str, any]:
+def get_learning_module(conversation_id: int, module_id: str) -> str:
 
     conversation = Conversation.objects.get(id = conversation_id)
-    index = conversation.module_index_map.get(module_id)
-    xml_string = conversation.history[index]['content']
+    module_info = conversation.module_index_map.get(module_id)
+    print(f"模块索引映射: {conversation.module_index_map}")
+    print(f"module_info结构: {module_info}")
+    if module_info is None:
+        return get_default_module_content()
+    
+    content_index = module_info.get('content_index')
+    xml_string = conversation.history[content_index]['content']
     """
     从阶段三的学习内容 XML 字符串中提取当前模块信息、内容、习题和进度目录。
     
@@ -218,7 +299,8 @@ def get_learning_module(conversation_id: int, module_id: str) -> Dict[str, any]:
         'module_info': {},
         'content': '',
         'exercise': '',
-        'progress_map': []
+        'progress_map': [],
+        'answer': ''
     }
     
     # --------------------------------------------------
@@ -265,7 +347,48 @@ def get_learning_module(conversation_id: int, module_id: str) -> Dict[str, any]:
                 'title': item_match.group(3).strip()
             })
             
+        #获取答案
+        result['answer'] = find_answer_for_module(conversation, module_id) 
+        print(result['exercise'])
     return result
+
+def find_answer_for_module(conversation, module_id: str) -> str:
+    """获取各模块的答案"""
+    module_info = conversation.module_index_map.get(module_id, {})
+    
+    # 从记录的答案索引获取
+    if isinstance(module_info, dict) and 'answer_index' in module_info:
+        answer_index = module_info['answer_index']
+        if answer_index < len(conversation.history):
+            return conversation.history[answer_index]['content']
+    
+    # 如果没有记录答案索引，使用模块标识搜索
+    module_patterns = [
+        f"模块{module_id}课后习题",
+        f"模块 {module_id} 课后习题", 
+        f"模块{module_id}参考答案",
+        f"模块 {module_id} 参考答案"
+    ]
+    
+    for i in range(len(conversation.history)-1, -1, -1):
+        message = conversation.history[i]
+        if message['role'] == 'assistant':
+            content = message['content']
+            for pattern in module_patterns:
+                if pattern in content:
+                    return content
+    
+    return ""
+
+def get_default_module_content() -> Dict[str, any]:
+    """当模块不存在时返回默认内容"""
+    return {
+        'module_info': {'id': 'M01', 'title': '默认模块'},
+        'content': '内容加载中...',
+        'exercise': '习题加载中...',
+        'progress_map': [],
+        'answer': '答案加载中...'
+    }
 
 
 def get_module_id(xml_fragment: str):

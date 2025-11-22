@@ -1,153 +1,239 @@
-{% extends "core/layout.html" %}
+{% extends 'core/layout.html' %}
+
+{% block title %}学习内容 - AI学习助手{% endblock %}
 
 {% block content %}
-
-<style>
-    /* 新增样式：用于实现两栏布局 */
-    #learning-container {
-        display: flex;
-        min-height: 80vh; /* 确保内容区足够长 */
-    }
-    #sidebar {
-        width: 300px;
-        background-color: #f8f8f8;
-        padding: 20px;
-        border-right: 1px solid #ddd;
-        /* 保持目录位置固定，如果需要 */
-        /* position: sticky; top: 0; height: 100vh; */
-    }
-    #main-area {
-        flex-grow: 1;
-        padding: 30px;
-        display: flex;
-        flex-direction: column; /* 垂直排列内容和输入区 */
-    }
-    .module-item {
-        margin-bottom: 5px;
-        padding: 8px 10px;
-        border-radius: 4px;
-        font-size: 0.95em;
-    }
-    .module-item a {
-        text-decoration: none;
-        color: #333;
-        display: block;
-    }
-    .module-item.current {
-        background-color: #d1e7ff; /* 当前模块高亮 */
-        font-weight: bold;
-        border-left: 4px solid #007bff;
-    }
-    .module-item.completed a {
-         color: #6c757d; /* 已完成变灰 */
-    }
-    /* 学习内容区样式 */
-    #learning-content-display {
-        flex-grow: 1; /* 占据大部分空间 */
-        margin-bottom: 20px;
-    }
-    pre {
-        background-color: #eee;
-        padding: 15px;
-        white-space: pre-wrap; /* 允许内容自动换行 */
-        border-radius: 5px;
-    }
-    /* 聊天输入区样式 */
-    .chat-input {
-        padding-top: 20px;
-        border-top: 1px solid #eee;
-    }
-</style>
-
-<div id="learning-container">
-
-    <div id="sidebar">
-        <h2>📚 学习计划</h2>
-        <nav>
-            {% for item in learning_plan %}
-                {% with current_id=learning_content.module_info.id %}
-                
-                <div class="module-item 
-                    {% if item.id == current_id %}current{% endif %}
-                    {% if item.status == 'completed' %}completed{% endif %}
-                ">
-                    <a href="{% url 'chat' conversation_id=conversation_id %}?module_id={{ item.id }}">
-                        [{{ item.id }}] {{ item.title }}
-                        {% if item.status == 'completed' %} (✔) {% endif %}
-                    </a>
+<div class="row g-4" style="height: calc(100vh - 150px);">
+    <!-- 左侧学习计划目录 -->
+    <div class="col-lg-4 h-100">
+        <div class="card h-100 d-flex flex-column">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>学习进度</h5>
+            </div>
+            <div class="card-body d-flex flex-column overflow-hidden">
+                <div class="mb-3">
+                    <div class="progress mb-2" style="height: 20px;">
+                        <div class="progress-bar bg-success" style="width: {{ learning_progress }}%;">
+                            {{ learning_progress|floatformat:0 }}%
+                        </div>
+                    </div>
+                    <p class="text-center mb-0">
+                        <small>已完成 {{ completed_modules|length }}/{{ learning_plan|length }} 个模块</small>
+                    </p>
                 </div>
-                {% endwith %}
-            {% empty %}
-                <p>学习计划尚未加载。</p>
-            {% endfor %}
-        </nav>
+                
+                <h6 class="border-bottom pb-2 mb-3">
+                    <i class="fas fa-list-ol me-2"></i>学习计划
+                </h6>
+                
+                <div class="module-list flex-grow-1 overflow-auto">
+                    {% for module in learning_plan %}
+                    <div class="module-item mb-2 {% if module.id == learning_content.module_info.id %}active{% endif %} 
+                                {% if module.id in completed_modules %}completed{% endif %}">
+                        <a href="?module_id={{ module.id }}" 
+                           class="d-block p-2 text-decoration-none module-link 
+                                  {% if module.id not in completed_modules and module.id != learning_content.module_info.id and module.id not in learning_content.available_modules %}text-muted{% endif %}"
+                           {% if module.id not in completed_modules and module.id != learning_content.module_info.id and module.id not in learning_content.available_modules %}
+                           onclick="alert('当前学习内容还未生成，请按顺序学习或点击下一课继续'); return false;"
+                           {% endif %}>
+                            <div class="d-flex align-items-center">
+                                <span class="badge {% if module.id in completed_modules %}bg-success{% elif module.id == learning_content.module_info.id %}bg-primary{% else %}bg-secondary{% endif %} me-2">
+                                    {{ module.id }}
+                                </span>
+                                <span class="module-title flex-grow-1">{{ module.title }}</span>
+                                {% if module.id in completed_modules %}
+                                <i class="fas fa-check text-success"></i>
+                                {% endif %}
+                            </div>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div id="main-area">
-        
-        <div id="learning-content-display">
-            {% with info=learning_content.module_info %}
-                {% if info.title %}
-                    <h1>{{ info.title }}</h1>
-                    <p>模块ID: <strong>{{ info.id }}</strong></p>
-                    <hr>
-                    
-                    <h2>📖 课程内容</h2>
-                    <div class="content-body">
-                        <pre>{{ learning_content.content }}</pre>
+    <!-- 右侧学习内容 -->
+    <div class="col-lg-8 h-100">
+        <div class="card h-100 d-flex flex-column">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">{{ learning_content.module_info.title }}</h4>
+                <span class="badge bg-primary">模块ID: {{ learning_content.module_info.id }}</span>
+            </div>
+            
+            <!-- 右侧内容滚动区域 -->
+            <div class="card-body flex-grow-1 d-flex flex-column overflow-hidden p-0">
+                <div class="content-scrollable flex-grow-1 overflow-auto p-3">
+                    <!-- 学习内容区域 -->
+                    {% if learning_content.content %}
+                    <div class="learning-content mb-5">
+                        <h5 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-book me-2"></i>课程内容
+                        </h5>
+                        <div class="content-area">
+                            <div id="content-markdown" class="markdown-body">
+                                {{ learning_content.content }}
+                            </div>
+                        </div>
                     </div>
-                    
-                    <h2>📝 课后习题</h2>
-                    <div class="exercise-body">
-                        <pre>{{ learning_content.exercise }}</pre>
+                    {% endif %}
+
+                    <!-- 课后习题区域 -->
+                    {% if learning_content.exercise %}
+                    <div class="exercises-section mb-5" id="exercisesArea">
+                        <h5 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-pencil-alt me-2"></i>课后习题
+                        </h5>
+                        
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">习题内容</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="exercise-markdown" class="markdown-body">
+                                    {{ learning_content.exercise }}
+                                </div>
+                                
+                                <!-- 用户答案输入区域 -->
+                                <div class="mt-4">
+                                    <label class="form-label"><strong>你的答案：</strong></label>
+                                    <textarea class="form-control user-answer" rows="4" 
+                                              placeholder="请在这里写下你的答案..."></textarea>
+                                </div>
+                                
+                                <!-- 答案显示区域 -->
+                                {% if learning_content.answer %}
+                                <div class="answer-section mt-3" style="display: none;">
+                                    <div class="alert alert-info">
+                                        <strong>参考答案：</strong>
+                                        <div class="mt-2 markdown-body" id="answer-markdown">
+                                            {{ learning_content.answer }}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                <!-- 答案操作按钮 -->
+                                <div class="d-flex gap-2 mt-3">
+                                    {% if learning_content.answer %}
+                                    <button class="btn btn-outline-primary btn-sm toggle-answer">
+                                        <i class="fas fa-eye me-1"></i>显示答案
+                                    </button>
+                                    {% else %}
+                                    <form method="post" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="answer">
+                                        <input type="hidden" name="current_module_id" value="{{ learning_content.module_info.id }}">
+                                        <button type="submit" class="btn btn-success btn-sm">
+                                            <i class="fas fa-check me-1"></i>生成答案
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                {% else %}
-                    <h1>欢迎</h1>
-                    <p>请点击左侧目录开始学习。</p>
-                {% endif %}
-            {% endwith %}
-        </div>
+                    {% endif %}
 
-        <div class="chat-input">
-            <form method="POST" action="{% url 'chat' conversation_id=conversation_id %}?module_id={{ learning_content.module_info.id }}">
-                {% csrf_token %} 
-                
-                <input type="hidden" name="current_module_id" value="{{ learning_content.module_info.id|default:'' }}">
-                
-                <button name="action" value="next" type="submit">下一课 / 继续学习</button>
-                
-                <button name="action" value="answer" type="submit">查看习题答案</button>
-                
-                <button type="button" id="btnC">答疑</button>
+                    <!-- 答疑区域 -->
+                    <div class="qa-section" id="qaArea">
+                        <h5 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-question-circle me-2"></i>答疑解惑
+                        </h5>
+                        
+                        <!-- 提问表单 -->
+                        <form method="post" class="mb-4">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="Q&A">
+                            <input type="hidden" name="current_module_id" value="{{ learning_content.module_info.id }}">
+                            <div class="mb-3">
+                                <label for="question" class="form-label">有什么问题需要解答？</label>
+                                <textarea name="question" id="question" class="form-control" rows="3" 
+                                          placeholder="请输入你的问题..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-1"></i>提交问题
+                            </button>
+                        </form>
 
-                <div id="customInputContainer" style="display: none; margin-top: 15px;">
-                    <label for="questionInput">输入问题：</label>
-                    <input type="text" name="a-question" id="questionInput" placeholder="输入你想问的问题">
-                    <button name="action" value="Q&A" type="submit">提交问题</button>
+                        <!-- 答疑历史 - 问题列表 -->
+                        {% if qa_session and qa_session.qa_pairs %}
+                        <div class="qa-history">
+                            <h6 class="mb-3">答疑历史 ({{ qa_session.qa_pairs|length }}个问题)</h6>
+                            
+                            <div class="accordion" id="qaAccordion">
+                                {% for qa in qa_session.qa_pairs %}
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+                                        <button class="accordion-button {% if not forloop.last %}collapsed{% endif %}" 
+                                                type="button" 
+                                                data-bs-toggle="collapse" 
+                                                data-bs-target="#collapse{{ forloop.counter }}" 
+                                                aria-expanded="{% if forloop.last %}true{% else %}false{% endif %}" 
+                                                aria-controls="collapse{{ forloop.counter }}">
+                                            <div class="d-flex align-items-center w-100">
+                                                <span class="badge bg-primary me-3">Q{{ forloop.counter }}</span>
+                                                <span class="question-preview flex-grow-1 text-start">
+                                                    {{ qa.question|truncatechars:60 }}
+                                                </span>
+                                                <small class="text-muted ms-2">
+                                                    {{ qa.timestamp|date:"m-d H:i" }}
+                                                </small>
+                                            </div>
+                                        </button>
+                                    </h2>
+                                    <div id="collapse{{ forloop.counter }}" 
+                                         class="accordion-collapse collapse {% if forloop.last %}show{% endif %}" 
+                                         aria-labelledby="heading{{ forloop.counter }}" 
+                                         data-bs-parent="#qaAccordion">
+                                        <div class="accordion-body">
+                                            <div class="question-full mb-3">
+                                                <strong class="text-primary">问题：</strong>
+                                                <span>{{ qa.question }}</span>
+                                            </div>
+                                            <div class="answer-full">
+                                                <strong class="text-success">回答：</strong>
+                                                <div class="mt-2 p-3 bg-light rounded markdown-body" id="qa-answer-{{ forloop.counter }}">
+                                                    {{ qa.answer }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-comments fa-2x mb-3"></i>
+                            <p>还没有答疑记录，有问题请随时提问</p>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
-            </form>
+            </div>
+
+            <!-- 底部导航 -->
+            <div class="card-footer">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted">进度: {{ learning_progress|floatformat:0 }}%</span>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="next">
+                        <input type="hidden" name="current_module_id" value="{{ learning_content.module_info.id }}">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-arrow-right me-1"></i>下一课
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
-
-<script>
-    // JavaScript for toggling the Q&A input field
-    document.addEventListener('DOMContentLoaded', function() {
-        const btnC = document.getElementById('btnC');
-        const customContainer = document.getElementById('customInputContainer');
-
-        if (btnC && customContainer) {
-            btnC.addEventListener('click', function() {
-                // 切换输入框的显示状态
-                if (customContainer.style.display === 'none' || customContainer.style.display === '') {
-                    customContainer.style.display = 'block';
-                } else {
-                    customContainer.style.display = 'none';
-                }
-            });
-        }
-    });
-</script>
+{% block extra_scripts %}
 
 {% endblock %}
