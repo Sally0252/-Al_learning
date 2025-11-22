@@ -1,0 +1,155 @@
+{% extends 'core/layout.html' %}
+
+{% block title %}学习知识库 - AI学习助手{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- 统计卡片 -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body text-center">
+                        <h4 class="mb-0">{{ total_topics }}</h4>
+                        <small>学习主题</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <h4 class="mb-0">{{ completed_modules }}</h4>
+                        <small>完成模块</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <h4 class="mb-0">{{ total_modules }}</h4>
+                        <small>总模块</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <h4 class="mb-0">{{ completion_rate|floatformat:0 }}%</h4>
+                        <small>完成率</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 搜索框 -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" action="{% url 'knowledge_search' %}" class="d-flex">
+                    <input type="text" name="q" class="form-control me-2" placeholder="搜索学习内容..." value="{{ request.GET.q }}">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-1"></i>搜索
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 知识概览 -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-graduation-cap me-2"></i>学习知识库</h5>
+                <span class="badge bg-primary">{{ knowledge_overview|length }} 个学习主题</span>
+            </div>
+            <div class="card-body">
+                {% if knowledge_overview %}
+                <div class="row">
+                    {% for overview in knowledge_overview %}
+                    <div class="col-lg-6 mb-4">
+                        <div class="card h-100 knowledge-topic-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="card-title mb-0">
+                                        <a href="{% url 'chat' overview.id %}" class="text-decoration-none">
+                                            {{ overview.title }}
+                                        </a>
+                                    </h6>
+                                    <span class="badge {% if overview.progress == 100 %}bg-success{% else %}bg-primary{% endif %}">
+                                        {{ overview.progress|floatformat:0 }}%
+                                    </span>
+                                </div>
+                                
+                                <!-- 进度条 -->
+                                <div class="progress mb-3" style="height: 8px;">
+                                    <div class="progress-bar {% if overview.progress == 100 %}bg-success{% else %}bg-primary{% endif %}" 
+                                         style="width: {{ overview.progress }}%;"></div>
+                                </div>
+                                
+                                <!-- 学习信息 -->
+                                <p class="small text-muted mb-3">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    {{ overview.completed_count }}/{{ overview.total_count }} 个模块
+                                    <span class="ms-2">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ overview.last_updated|date:"m-d H:i" }}
+                                    </span>
+                                </p>
+                                
+                                <!-- 关键概念 -->
+                                {% if overview.key_concepts %}
+                                <div class="key-concepts mb-3">
+                                    <strong class="small text-muted">关键概念:</strong>
+                                    <div class="mt-1">
+                                        {% for concept in overview.key_concepts %}
+                                        <span class="badge bg-light text-dark me-1 mb-1">{{ concept|truncatechars:20 }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                <!-- 模块列表 -->
+                                {% if overview.module_titles %}
+                                <div class="module-titles">
+                                    <strong class="small text-muted">学习模块:</strong>
+                                    <ul class="small mt-1 mb-0 ps-3">
+                                        {% for title in overview.module_titles %}
+                                        <li>{{ title|truncatechars:30 }}</li>
+                                        {% endfor %}
+                                        {% if overview.total_count > 4 %}
+                                        <li class="text-muted">... 还有 {{ overview.total_count|add:"-4" }} 个模块</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'chat' overview.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-play me-1"></i>继续学习
+                                    </a>
+                                    <a href="{% url 'chat' overview.id %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-eye me-1"></i>查看详情
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-book-open fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">知识库为空</h5>
+                    <p class="text-muted">完成一些学习后，你的知识将在这里展示</p>
+                    <a href="{% url 'new_chat' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>开始学习
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+
+{% endblock %}

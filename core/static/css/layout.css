@@ -1,0 +1,49 @@
+body{
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+.navbar-brand {
+    font-weight: bold;
+    color: #4e73df !important;
+}
+.main-content {
+    min-height: calc(100vh - 120px);
+    padding: 20px 0;
+}
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    margin-bottom: 20px;
+}
+.card-header {
+    background-color: #f8f9fc;
+    border-bottom: 1px solid #e3e6f0;
+    font-weight: 600;
+}
+.btn-primary {
+    background-color: #4e73df;
+    border-color: #4e73df;
+}
+.btn-primary:hover {
+    background-color: #2e59d9;
+    border-color: #2653d4;
+}
+.sidebar {
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    height: fit-content;
+}
+.history-item {
+    border-left: 3px solid #4e73df;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    background-color: #f8f9fc;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.history-item:hover {
+    background-color: #e9ecef;
+    transform: translateX(5px);
+}

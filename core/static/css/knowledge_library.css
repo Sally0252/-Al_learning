@@ -1,0 +1,23 @@
+.knowledge-topic-card {
+    transition: transform 0.2s;
+    border-left: 4px solid #4e73df;
+}
+
+.knowledge-topic-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.key-concepts, .module-titles {
+    border-top: 1px solid #e9ecef;
+    padding-top: 12px;
+}
+
+.module-titles ul {
+    margin-bottom: 0;
+}
+
+.module-titles li {
+    margin-bottom: 2px;
+    color: #6c757d;
+}

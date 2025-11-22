@@ -1,19 +1,120 @@
-{% extends "core/layout.html" %}
+{% extends 'core/layout.html' %}
+
+{% block title %}首页 - AI学习助手{% endblock %}
+
 {% block content %}
-
-<div class="conversation_list">
-    {% for conversation in conversations %}
-    <div class="conversation_item">
-        <a href="{% url 'chat' conversation.id %}">{{ conversation.title }}</a>
-        <a href="{% url 'remove' conversation.id %}"
-            onclick="return confirm('Do you really want to delete this conversation?')">Remove</a>
-        <hr>   
+<div class="row">
+    <!-- 侧边栏 - 历史记录 -->
+    <div class="col-lg-4 mb-4">
+        <div class="sidebar">
+            <h5 class="mb-3">
+                <i class="fas fa-history me-2"></i>学习历史
+            </h5>
+            
+            {% if conversations %}
+                <div class="history-list">
+                    {% for conversation in conversations %}
+                    <div class="history-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1" onclick="location.href='{% url 'chat' conversation.id %}'" style="cursor: pointer;">
+                                <h6 class="mb-1">
+                                    {{ conversation.title|default:"未命名对话"}}
+                                </h6>
+                                <small class="text-muted">
+                                    {{ conversation.created_at|date:"Y-m-d H:i" }}
+                                </small>
+                            </div>
+                            <form method="post" action="{% url 'remove' conversation.id %}" 
+                                  class="d-inline" onsubmit="return confirm('确定要删除这个对话吗？');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">还没有学习记录</p>
+                </div>
+            {% endif %}
+        </div>
     </div>
-    {% endfor %}
-</div>
-<div class="new_chat">
-    <a href="{% url 'new_chat'%}">New Chat</a>
-</div>
 
+    <!-- 主内容区 -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-robot fa-4x text-primary mb-3"></i>
+                    <h2 class="text-primary">欢迎使用AI学习助手</h2>
+                    <p class="lead text-muted">个性化学习路径，智能答疑解惑，助你高效掌握知识</p>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-4 mb-3">
+                        <div class="feature-item">
+                            <i class="fas fa-road fa-2x text-primary mb-2"></i>
+                            <h5>
+                                <a href="{% url 'new_chat' %}">
+                                    个性化路径
+                                </a>
+                            </h5>
+                            <p class="text-muted small">根据你的需求定制学习计划</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="feature-item">
+                            <i class="fas fa-graduation-cap fa-2x text-primary mb-2"></i>
+                            <h5>智能答疑</h5>
+                            <p class="text-muted small">随时解答学习中的疑问</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="feature-item">
+                            <i class="fas fa-chart-line fa-2x text-primary mb-2"></i>
+                            <h5>进度跟踪</h5>
+                            <p class="text-muted small">实时掌握学习进度</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <a href="{% url 'new_chat' %}" class="btn btn-primary btn-lg px-5">
+                    <i class="fas fa-plus me-2"></i>开始新的学习
+                </a>
+            </div>
+        </div>
 
+        <!-- 快速继续学习区域 -->
+        {% if conversations %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>快速继续学习</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for conversation in conversations|slice:":3" %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">{{ conversation.title|default:"未命名对话" }}</h6>
+                                <p class="card-text small text-muted">
+                                    进度: {{ conversation.current_progress|floatformat:0 }}%
+                                </p>
+                                <a href="{% url 'chat' conversation.id %}" class="btn btn-outline-primary btn-sm">
+                                    继续学习
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}
