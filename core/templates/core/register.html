@@ -1,0 +1,77 @@
+{% extends 'core/layout.html' %}
+
+{% block title %}注册 - AI学习助手{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4 class="mb-0"><i class="fas fa-user-plus me-2"></i>用户注册</h4>
+            </div>
+            <div class="card-body p-4">
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label">
+                            <i class="fas fa-user me-1"></i>用户名
+                        </label>
+                        <input type="text" name="username" class="form-control" id="id_username" 
+                               placeholder="请输入用户名" required autofocus>
+                        {% if form.username.help_text %}
+                        <div class="form-text">{{ form.username.help_text }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_password1" class="form-label">
+                            <i class="fas fa-lock me-1"></i>密码
+                        </label>
+                        <input type="password" name="password1" class="form-control" id="id_password1" 
+                               placeholder="请输入密码" required>
+                        {% if form.password1.help_text %}
+                        <div class="form-text">{{ form.password1.help_text }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_password2" class="form-label">
+                            <i class="fas fa-lock me-1"></i>确认密码
+                        </label>
+                        <input type="password" name="password2" class="form-control" id="id_password2" 
+                               placeholder="请再次输入密码" required>
+                    </div>
+                    
+                    <div class="d-grid mb-3">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-user-plus me-2"></i>注册
+                        </button>
+                    </div>
+                    
+                    <div class="text-center">
+                        <p class="mb-0">
+                            已有账号？ 
+                            <a href="{% url 'login' %}" class="text-decoration-none">立即登录</a>
+                        </p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

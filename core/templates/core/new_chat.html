@@ -1,11 +1,103 @@
 {% extends 'core/layout.html' %}
 
+{% block title %}开始新的学习 - AI学习助手{% endblock %}
+
 {% block content %}
-<form action="{% url 'new_chat'%}" method="POST">
-    {% csrf_token %}
-    <label for="answer_input">你想要学什么？</label>
-    <input type="text" name="answer" id="answer_input" >
-    <button type="submit">确定</button>
-</form>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header text-center">
+                <h3 class="mb-0"><i class="fas fa-rocket me-2"></i>开始新的学习</h3>
+            </div>
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <p class="lead text-muted">告诉我们你想要学习什么内容</p>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- 快速选择标签 -->
+                    <div class="mb-4">
+                        <label class="form-label mb-3">
+                            <i class="fas fa-bolt me-1"></i>快速选择学习主题
+                        </label>
+                        <div class="row g-2">
+                            <div class="col-md-4 col-sm-6">
+                                <button type="button" class="btn btn-outline-primary w-100 tag-btn" data-tag="Python编程基础">
+                                    <i class="fab fa-python me-1"></i>Python基础
+                                </button>
+                            </div>
+                            <div class="col-md-4 col-sm-6">
+                                <button type="button" class="btn btn-outline-primary w-100 tag-btn" data-tag="Java面向对象编程">
+                                    <i class="fab fa-java me-1"></i>Java编程
+                                </button>
+                            </div>
+                            <div class="col-md-4 col-sm-6">
+                                <button type="button" class="btn btn-outline-primary w-100 tag-btn" data-tag="Web前端开发(HTML/CSS/JavaScript)">
+                                    <i class="fab fa-js me-1"></i>前端开发
+                                </button>
+                            </div>
+                            <div class="col-md-4 col-sm-6">
+                                <button type="button" class="btn btn-outline-primary w-100 tag-btn" data-tag="机器学习与人工智能">
+                                    <i class="fas fa-brain me-1"></i>机器学习
+                                </button>
+                            </div>
+                            <div class="col-md-4 col-sm-6">
+                                <button type="button" class="btn btn-outline-primary w-100 tag-btn" data-tag="数据库设计与SQL">
+                                    <i class="fas fa-database me-1"></i>数据库
+                                </button>
+                            </div>
+                            <div class="col-md-4 col-sm-6">
+                                <button type="button" class="btn btn-outline-primary w-100 tag-btn" data-tag="数据结构与算法">
+                                    <i class="fas fa-code me-1"></i>数据结构
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 学习内容输入框 -->
+                    <div class="mb-4">
+                        <label for="answer" class="form-label">
+                            <i class="fas fa-graduation-cap me-1"></i>你想要学什么？
+                        </label>
+                        <textarea 
+                            name="answer" 
+                            id="answer" 
+                            class="form-control" 
+                            rows="4" 
+                            placeholder="例如：Vue.js 基础、Python 数据分析、机器学习入门..."
+                            required
+                        ></textarea>
+                        <div class="form-text">请详细描述你想学习的内容，越具体越好</div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-play me-2"></i>开始学习
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 学习提示卡片 -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-lightbulb me-2 text-warning"></i>学习建议
+                </h5>
+                <ul class="list-unstyled mb-0">
+                    <li><i class="fas fa-check text-success me-2"></i>明确学习目标，例如："掌握Python基础语法"</li>
+                    <li><i class="fas fa-check text-success me-2"></i>说明你的基础水平，例如："零基础开始学习"</li>
+                    <li><i class="fas fa-check text-success me-2"></i>设定时间期望，例如："希望在2个月内完成"</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
 
 {% endblock %}
